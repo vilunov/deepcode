@@ -1,0 +1,13 @@
+# Project
+/resources
+
+# Python
+.venv/
+.coverage
+.pytest_cache/
+
+# Rust
+target/
+
+# IntelliJ
+.idea/
