@@ -20,6 +20,18 @@ fn train_glob_pattern(language: &'static str) -> String {
     )
 }
 
+fn valid_test_glob_pattern(language: &'static str) -> (String, String) {
+    let valid = format!(
+        "../resources/data/{}/final/jsonl/valid/**/*.jsonl.gz",
+        language
+    );
+    let test = format!(
+        "../resources/data/{}/final/jsonl/test/**/*.jsonl.gz",
+        language
+    );
+    (valid, test)
+}
+
 fn filter(token: &str) -> bool {
     !token.starts_with("//")
         && !token.starts_with("#")
@@ -80,9 +92,15 @@ pub fn build_vocabs() {
     process_docs("doc");
 }
 
-fn convert_to_h5(file: &mut hdf5::File, lang: &'static str) {
+fn convert_to_h5(
+    train: &mut hdf5::File,
+    valid: &mut hdf5::File,
+    test: &mut hdf5::File,
+    lang: &'static str,
+) {
     dbg!("convert_to_h5", lang);
-    let glob_pattern = train_glob_pattern(lang);
+    let train_pattern = train_glob_pattern(lang);
+    let (valid_pattern, test_pattern) = valid_test_glob_pattern(lang);
 
     let vocab_code = BPE::from_files(
         &format!("../cache/vocabs/code-{}-vocab.json", lang),
@@ -100,62 +118,64 @@ fn convert_to_h5(file: &mut hdf5::File, lang: &'static str) {
     .build()
     .unwrap();
 
-    let count: usize = glob(&glob_pattern)
-        .expect("Failed to read glob pattern")
-        .map(|entry| {
-            let path = entry.expect("Failed to get entry");
-            let file = File::open(path).expect("Failed to open file");
-            let decoder = Decoder::new(file).expect("Failed to create decoder");
-            let deser = Deserializer::from_reader(decoder);
-            deser.into_iter::<SnippetDoc>().map(Result::unwrap).count()
-        })
-        .sum();
-    dbg!(count);
-    let dataset = file.new_dataset::<Snippet>().create(lang, count).unwrap();
-    let snippets = glob(&glob_pattern)
-        .expect("Failed to read glob pattern")
-        .flat_map(|entry| {
-            let path = entry.expect("Failed to get entry");
-            let file = File::open(path).expect("Failed to open file");
-            let decoder = Decoder::new(file).expect("Failed to create decoder");
-            let deserializer = Deserializer::from_reader(decoder);
-            deserializer
-                .into_iter::<SnippetBoth>()
-                .map(Result::unwrap)
-                .map(|snippet| {
-                    let code_vec = snippet
-                        .code_tokens
-                        .into_iter()
-                        .flat_map(|i| vocab_code.token_to_id(&i))
-                        .collect::<Vec<_>>();
-                    let doc_vec = snippet
-                        .docstring_tokens
-                        .into_iter()
-                        .flat_map(|i| vocab_doc.token_to_id(&i))
-                        .collect::<Vec<_>>();
-                    let mut code_tokens = [0; MAX_LEN];
-                    let mut doc_tokens = [0; MAX_LEN];
-                    let code_len = code_vec.len().min(MAX_LEN);
-                    let doc_len = doc_vec.len().min(MAX_LEN);
-                    code_tokens[..code_len].copy_from_slice(&code_vec[..code_len]);
-                    doc_tokens[..doc_len].copy_from_slice(&doc_vec[..doc_len]);
-                    Snippet {
-                        code_len,
-                        code_tokens,
-                        doc_len,
-                        doc_tokens,
-                    }
-                })
-        })
-        .collect::<Vec<_>>();
-    dbg!(snippets.len());
-    dataset.write(&snippets[..]).unwrap();
+    let convert_snippet = |snippet: SnippetBoth| {
+        let code_vec = snippet
+            .code_tokens
+            .into_iter()
+            .flat_map(|i| vocab_code.token_to_id(&i))
+            .collect::<Vec<_>>();
+        let doc_vec = snippet
+            .docstring_tokens
+            .into_iter()
+            .flat_map(|i| vocab_doc.token_to_id(&i))
+            .collect::<Vec<_>>();
+        let mut code_tokens = [0; MAX_LEN];
+        let mut doc_tokens = [0; MAX_LEN];
+        let code_len = code_vec.len().min(MAX_LEN);
+        let doc_len = doc_vec.len().min(MAX_LEN);
+        code_tokens[..code_len].copy_from_slice(&code_vec[..code_len]);
+        doc_tokens[..doc_len].copy_from_slice(&doc_vec[..doc_len]);
+        Snippet {
+            code_len,
+            code_tokens,
+            doc_len,
+            doc_tokens,
+        }
+    };
+
+    let process = |glob_pattern: &str, file: &mut hdf5::File| {
+        let snippets = glob(glob_pattern)
+            .expect("Failed to read glob pattern")
+            .flat_map(|entry| {
+                let path = entry.expect("Failed to get entry");
+                let file = File::open(path).expect("Failed to open file");
+                let decoder = Decoder::new(file).expect("Failed to create decoder");
+                Deserializer::from_reader(decoder)
+                    .into_iter::<SnippetBoth>()
+                    .map(Result::unwrap)
+                    .map(convert_snippet)
+                    .filter(|snippet| snippet.code_len > 0 && snippet.doc_len > 0)
+            })
+            .collect::<Vec<_>>();
+        dbg!(snippets.len());
+        let dataset = file
+            .new_dataset::<Snippet>()
+            .create(lang, snippets.len())
+            .unwrap();
+        dataset.write(&snippets[..]).unwrap();
+    };
+
+    process(&train_pattern, train);
+    process(&valid_pattern, valid);
+    process(&test_pattern, test);
 }
 
 pub fn build_h5() {
-    let mut file = hdf5::File::open("../cache/data/code.h5", "w").unwrap();
+    let mut train = hdf5::File::open("../cache/data/train.h5", "w").unwrap();
+    let mut valid = hdf5::File::open("../cache/data/valid.h5", "w").unwrap();
+    let mut test = hdf5::File::open("../cache/data/test.h5", "w").unwrap();
     for lang in LANGS {
-        convert_to_h5(&mut file, lang);
+        convert_to_h5(&mut train, &mut valid, &mut test, lang);
     }
 }
 
