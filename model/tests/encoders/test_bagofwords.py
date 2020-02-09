@@ -31,9 +31,7 @@ def test_bow_mean_mask():
     encoder = encoders.BagOfWords(128, 64, encoders.PoolingType.MEAN)
     input_batch = torch.tensor([[1, 2, 3, 4], [4, 3, 1, 2], [1, 2, 4, 3]])
     assert input_batch.shape == (3, 4)
-    input_mask = torch.tensor([[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 1, 1]]).type(
-        torch.bool
-    )
+    input_mask = torch.tensor([[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 1, 1]]).type(torch.bool)
     assert input_batch.shape == (3, 4)
     output_batch = encoder(input_batch, input_mask)
 

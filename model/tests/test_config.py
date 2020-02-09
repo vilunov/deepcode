@@ -8,8 +8,6 @@ train_path = "path1"
 valid_path = "path2"
 """
     parsed = parse_config(input)
-    expected = Config(
-        languages={"go": Language(train_path="path1", valid_path="path2")}
-    )
+    expected = Config(languages={"go": Language(train_path="path1", valid_path="path2")})
 
     assert parsed == expected

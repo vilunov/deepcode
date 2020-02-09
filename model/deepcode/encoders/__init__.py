@@ -7,9 +7,7 @@ __all__ = ("PoolingType", "BagOfWords")
 
 
 class BagOfWords(nn.Module):
-    def __init__(
-        self, vocabulary_size: int, encoded_size: int, pooling_type: PoolingType
-    ):
+    def __init__(self, vocabulary_size: int, encoded_size: int, pooling_type: PoolingType):
         super(BagOfWords, self).__init__()
         self._lookup = nn.Embedding(vocabulary_size, encoded_size)
         self._pool = pooling_functions[pooling_type]
