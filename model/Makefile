@@ -5,3 +5,6 @@ TEST = $(PYTHONPATH) pytest --verbosity=2 --showlocals --strict $(arg) -k "$(k)"
 
 test:
 	$(TEST) --cov=deepcode
+
+docker:
+	docker build -t vilunov/deepcode/model:latest .

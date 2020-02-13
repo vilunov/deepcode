@@ -5,9 +5,13 @@
 .venv/
 .coverage
 .pytest_cache/
+__pycache__/
 
 # Rust
 target/
 
 # IntelliJ
 .idea/
+
+# Other
+.DS_Store

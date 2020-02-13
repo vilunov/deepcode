@@ -10,17 +10,16 @@ torch = "^1.4"
 numpy = "^1.18"
 toml = "^0.10.0"
 h5py = "^2.10"
-tokenizers = "^0.2.0"
 dacite = "^1.2"
-fastai = "^1.0"
+transformers = "^2.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
 pytest-cov = "^2.8"
 
+[tool.black]
+line-length = 120
+
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
-
-[tool.black]
-line-length = 120
