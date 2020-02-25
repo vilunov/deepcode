@@ -1,8 +1,12 @@
+from typing import Optional
+
 import torch
 from torch import optim
 import numpy as np
 import logging
 
+from deepcode.config import Config
+from deepcode.encoders import Encoder
 from deepcode.loss import *
 from deepcode.model import Model
 from deepcode.prefetcher import BackgroundGenerator
@@ -11,34 +15,39 @@ __all__ = ("Scaffold",)
 
 
 class Scaffold:
-    def __init__(self, arguments):
+    def __init__(self, config: Config, weights_path: Optional[str]):
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self._init_data(arguments.batch_size)
+        self._init_data(config)
         self.model = Model(
-            languages=self.train_counts.keys(), dropout_rate=arguments.dropout, repr_size=arguments.repr_size,
+            dropout_rate=config.training.dropout_rate,
+            encoders_code={
+                language: Encoder.from_config(encoder_config, config.model.encoded_dims)
+                for language, encoder_config in config.model.code_encoder.items()
+            },
+            encoder_doc=Encoder.from_config(config.model.doc_encoder, config.model.encoded_dims),
         ).to(self.device)
-        if arguments.weights_path is not None:
-            self.model.load_state_dict(torch.load(arguments.weights_path, map_location=self.device))
-            logging.info(f"Loaded weights from file {arguments.weights_path}")
-        self.__optimizer = optim.Adam(self.model.parameters(), lr=arguments.learning_rate)
-        if arguments.loss == "triplet":
-            if arguments.loss_margin is None:
+        if weights_path is not None:
+            self.model.load_state_dict(torch.load(weights_path, map_location=self.device))
+            logging.info(f"Loaded weights from file {weights_path}")
+        self.__optimizer = optim.Adam(self.model.parameters(), lr=config.training.learning_rate)
+        if config.training.loss_type == "triplet":
+            if config.training.loss_margin is None:
                 raise ValueError("Loss margin required for triplet loss")
-            self.__loss = LossTriplet(arguments.loss_margin)
-        elif arguments.loss == "crossentropy":
+            self.__loss = LossTriplet(config.training.loss_margin)
+        elif config.training.loss_type == "crossentropy":
             self.__loss = LossCrossEntropy()
         else:
-            raise ValueError(f"Incorrect loss type: {arguments.loss}, expected triplet or crossentropy")
+            raise ValueError(f"Incorrect loss type: {config.training.loss_type}, expected triplet or crossentropy")
 
-    def _init_data(self, batch_size):
+    def _init_data(self, config: Config):
         from .data import open_data
 
-        self.train_counts, self.train_data, self._train_file = open_data(
-            "../cache/data/train.h5", self.device, batch_size
-        )
-        self.valid_counts, self.valid_data, self._valid_file = open_data(
-            "../cache/data/valid.h5", self.device, batch_size
-        )
+        batch_size = config.training.batch_size
+        path_train = config.training.data_train
+        path_valid = config.training.data_valid
+        languages = set(config.model.code_encoder.keys())
+        self.train_counts, self.train_data, self._train_file = open_data(path_train, self.device, batch_size, languages)
+        self.valid_counts, self.valid_data, self._valid_file = open_data(path_valid, self.device, batch_size, languages)
 
     def epoch_train(self, tqdm):
         self.model.train(True)

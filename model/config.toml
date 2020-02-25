@@ -1,0 +1,22 @@
+[training]
+learning_rate = 0.1
+data_train = "../cache/data/train.h5"
+data_valid = "../cache/data/valid.h5"
+loss_type = "crossentropy"
+dropout_rate = 0.2
+batch_size = 512
+
+[model]
+encoded_dims = 128
+
+[model.doc_encoder]
+type = "nbow"
+pooling_type = "max"
+
+[model.code_encoder.go]
+type = "nbow"
+pooling_type = "max"
+
+[model.code_encoder.java]
+type = "nbow"
+pooling_type = "max"

@@ -1,4 +1,4 @@
-from typing import Tuple, Iterable, Dict, List
+from typing import Tuple, Iterable, Dict, List, Set
 
 import h5py
 import torch
@@ -54,11 +54,15 @@ def collate(entries: Iterable[Tuple[str, Datapoint]]) -> Dict[str, Tensor]:
     return {language: par_stack(entries) for language, entries in result.items()}
 
 
-def open_data(path: str, device: str, batch_size: int) -> Tuple[Dict[str, int], DataLoader, h5py.File]:
+def open_data(
+    path: str, device: str, batch_size: int, languages: Set[str]
+) -> Tuple[Dict[str, int], DataLoader, h5py.File]:
     h5_file = h5py.File(path, "r")
     counts: Dict[str, int] = {}
     datasets: List[CodeDataset] = []
     for key in h5_file.keys():
+        if key not in languages:
+            continue
         dataset = CodeDataset(h5_file[key], key, device)
         datasets.append(dataset)
         counts[key] = dataset.__len__()

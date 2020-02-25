@@ -1,9 +1,10 @@
-from enum import Enum, auto
 from typing import Dict, Callable
 
 from torch import Tensor
 
-__all__ = ("PoolingType", "pooling_functions")
+from deepcode.config import PoolingType
+
+__all__ = ("pooling_functions",)
 
 
 def mean(tensor: Tensor, mask: Tensor) -> Tensor:
@@ -18,11 +19,6 @@ def max(tensor: Tensor, mask: Tensor) -> Tensor:
     tensor = tensor.clone()
     tensor[~mask] = float("-inf")
     return tensor.max(dim=-2)[0]
-
-
-class PoolingType(Enum):
-    MEAN = auto()
-    MAX = auto()
 
 
 pooling_functions: Dict[PoolingType, Callable[[Tensor, Tensor], Tensor]] = {

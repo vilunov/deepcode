@@ -1,3 +1,5 @@
+from typing import Dict
+
 import torch
 from torch import nn
 
@@ -7,13 +9,10 @@ __all__ = ("Model",)
 
 
 class Model(nn.Module):
-    def __init__(self, languages, dropout_rate: float, repr_size: int):
+    def __init__(self, dropout_rate: float, encoders_code: Dict[str, Encoder], encoder_doc: Encoder):
         super().__init__()
-        self.encoders_code = {
-            language: BagOfWords(vocabulary_size=32767, encoded_size=repr_size, pooling_type=PoolingType.MEAN)
-            for language in languages
-        }
-        self.encoder_doc = BagOfWords(vocabulary_size=32767, encoded_size=repr_size, pooling_type=PoolingType.MEAN)
+        self.encoders_code = encoders_code
+        self.encoder_doc = encoder_doc
         for key, value in self.encoders_code.items():
             self.add_module(f"encoders_code[{key}]", value)
         self.add_module("encoder_doc", self.encoder_doc)
