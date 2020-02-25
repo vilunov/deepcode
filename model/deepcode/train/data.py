@@ -54,7 +54,7 @@ def collate(entries: Iterable[Tuple[str, Datapoint]]) -> Dict[str, Tensor]:
     return {language: par_stack(entries) for language, entries in result.items()}
 
 
-def open_data(path: str, device: str) -> Tuple[Dict[str, int], DataLoader, h5py.File]:
+def open_data(path: str, device: str, batch_size: int) -> Tuple[Dict[str, int], DataLoader, h5py.File]:
     h5_file = h5py.File(path, "r")
     counts: Dict[str, int] = {}
     datasets: List[CodeDataset] = []
@@ -63,5 +63,5 @@ def open_data(path: str, device: str) -> Tuple[Dict[str, int], DataLoader, h5py.
         datasets.append(dataset)
         counts[key] = dataset.__len__()
     data = ConcatDataset(datasets)
-    sampler = BatchSampler(RandomSampler(data), batch_size=512, drop_last=True)
+    sampler = BatchSampler(RandomSampler(data), batch_size=batch_size, drop_last=True)
     return counts, DataLoader(data, batch_sampler=sampler, collate_fn=collate), h5_file
