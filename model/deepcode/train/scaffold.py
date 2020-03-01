@@ -42,12 +42,13 @@ class Scaffold:
     def _init_data(self, config: Config):
         from .data import open_data
 
-        batch_size = config.training.batch_size
+        batch_t = config.training.batch_size_train
+        batch_v = config.training.batch_size_valid
         path_train = config.training.data_train
         path_valid = config.training.data_valid
         languages = set(config.model.code_encoder.keys())
-        self.train_counts, self.train_data, self._train_file = open_data(path_train, self.device, batch_size, languages)
-        self.valid_counts, self.valid_data, self._valid_file = open_data(path_valid, self.device, batch_size, languages)
+        self.train_counts, self.train_data, self._train_file = open_data(path_train, self.device, batch_t, languages)
+        self.valid_counts, self.valid_data, self._valid_file = open_data(path_valid, self.device, batch_v, languages)
 
     def epoch_train(self, tqdm):
         self.model.train(True)

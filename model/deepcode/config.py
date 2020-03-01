@@ -21,7 +21,8 @@ class Training:
     loss_type: str
     loss_margin: Optional[float]
     dropout_rate: float
-    batch_size: int
+    batch_size_train: int
+    batch_size_valid: int
 
 
 @dataclass

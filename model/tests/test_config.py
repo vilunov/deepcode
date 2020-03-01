@@ -9,7 +9,8 @@ data_train = "../cache/data/train.h5"
 data_valid = "../cache/data/valid.h5"
 loss_type = "crossentropy"
 dropout_rate = 0.2
-batch_size = 512
+batch_size_train = 512
+batch_size_valid = 100
 
 [model]
 encoded_dims = 128
