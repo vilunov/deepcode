@@ -40,15 +40,30 @@ class Scaffold:
             raise ValueError(f"Incorrect loss type: {config.training.loss_type}, expected triplet or crossentropy")
 
     def _init_data(self, config: Config):
-        from .data import open_data
+        import h5py
+        from torch.utils.data import DataLoader, RandomSampler, BatchSampler, ConcatDataset
+        from deepcode.train import CodeDataset
+        from deepcode.train.data import open_data, collate
 
         batch_t = config.training.batch_size_train
         batch_v = config.training.batch_size_valid
         path_train = config.training.data_train
         path_valid = config.training.data_valid
         languages = set(config.model.code_encoder.keys())
-        self.train_counts, self.train_data, self._train_file = open_data(path_train, self.device, batch_t, languages)
-        self.valid_counts, self.valid_data, self._valid_file = open_data(path_valid, self.device, batch_v, languages)
+        _, self.train_data, self._train_file = open_data(path_train, self.device, batch_t, languages)
+
+        valid_datasets = dict()
+        self.valid_data = dict()
+        self._valid_file = h5py.File(path_valid, "r")
+        for lang in languages:
+            data = CodeDataset(self._valid_file[lang], lang, self.device)
+            sampler = BatchSampler(RandomSampler(data), batch_size=batch_v, drop_last=True)
+            valid_datasets[lang] = data
+            self.valid_data[lang] = DataLoader(data, batch_sampler=sampler, collate_fn=collate)
+        whole_valid_dataset = ConcatDataset(list(valid_datasets.values()))
+        all_sampler = BatchSampler(RandomSampler(whole_valid_dataset), batch_size=batch_v, drop_last=True)
+        dataloader = DataLoader(whole_valid_dataset, batch_sampler=all_sampler, collate_fn=collate)
+        self.valid_data["all"] = dataloader
 
     def epoch_train(self, tqdm):
         self.model.train(True)
@@ -76,9 +91,15 @@ class Scaffold:
 
     def epoch_validate(self, tqdm):
         self.model.train(False)
+        mrr = dict()
+        for name in self.valid_data.keys():
+            mrr[name] = self.calculate_mrr(tqdm, name)
+        return {"mrr": mrr}
+
+    def calculate_mrr(self, tqdm, name: str):
         mrr_sum, mrr_num = 0.0, 0
-        pbar = tqdm(desc="Validation", total=len(self.valid_data))
-        for snippet_dict in self.valid_data:
+        pbar = tqdm(desc=f"Calculating MRR of {name}", total=len(self.valid_data[name]))
+        for snippet_dict in self.valid_data[name]:
             encoded_code, encoded_doc = self.model(snippet_dict)
             distances = torch.matmul(encoded_code, encoded_doc.T)
             weights = distances.diag()
@@ -87,7 +108,7 @@ class Scaffold:
             pbar.update()
             pbar.set_postfix(mrr=mrr_sum / mrr_num)
         pbar.close()
-        return {"mrr": mrr_sum / mrr_num}
+        return mrr_sum / mrr_num
 
     def close(self):
         self._train_file.close()

@@ -3,20 +3,37 @@ learning_rate = 0.1
 data_train = "../cache/data/train.h5"
 data_valid = "../cache/data/valid.h5"
 loss_type = "crossentropy"
-dropout_rate = 0.2
-batch_size = 512
+dropout_rate = 0.0
+batch_size_train = 512
+batch_size_valid = 100
 
 [model]
-encoded_dims = 128
+encoded_dims = 64
 
 [model.doc_encoder]
 type = "nbow"
-pooling_type = "max"
+pooling_type = "mean"
 
 [model.code_encoder.go]
 type = "nbow"
-pooling_type = "max"
+pooling_type = "mean"
 
 [model.code_encoder.java]
 type = "nbow"
-pooling_type = "max"
+pooling_type = "mean"
+
+[model.code_encoder.python]
+type = "nbow"
+pooling_type = "mean"
+
+[model.code_encoder.ruby]
+type = "nbow"
+pooling_type = "mean"
+
+[model.code_encoder.php]
+type = "nbow"
+pooling_type = "mean"
+
+[model.code_encoder.javascript]
+type = "nbow"
+pooling_type = "mean"

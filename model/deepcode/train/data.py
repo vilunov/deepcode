@@ -65,7 +65,7 @@ def open_data(
             continue
         dataset = CodeDataset(h5_file[key], key, device)
         datasets.append(dataset)
-        counts[key] = dataset.__len__()
+        counts[key] = len(dataset)
     data = ConcatDataset(datasets)
     sampler = BatchSampler(RandomSampler(data), batch_size=batch_size, drop_last=True)
     return counts, DataLoader(data, batch_sampler=sampler, collate_fn=collate), h5_file
