@@ -1,4 +1,4 @@
 from .data import *
-from .scaffold import Scaffold
+from .scaffold import TrainScaffold
 
-__all__ = ("Scaffold", "CodeDataset", "open_data")
+__all__ = ("TrainScaffold", "CodeDataset", "open_data")

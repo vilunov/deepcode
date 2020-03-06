@@ -8,7 +8,7 @@ from shutil import copyfile
 import torch
 from tqdm import tqdm
 
-from deepcode.train import Scaffold
+from deepcode.train import TrainScaffold
 from deepcode.config import parse_config
 
 
@@ -26,7 +26,7 @@ def main():
     args = arguments()
     with open(args.config, "r") as f:
         config = parse_config(f.read())
-    scaffold = Scaffold(config, args.weights_path)
+    scaffold = TrainScaffold(config, args.weights_path)
     save_path = os.path.join("..", "cache", "models", datetime.utcnow().strftime("%Y.%m.%d_%H.%M.%S"))
     logging.info("Starting app")
     os.makedirs(save_path)

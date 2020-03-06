@@ -1,14 +1,14 @@
 [training]
-learning_rate = 0.1
+learning_rate = 0.01
 data_train = "../cache/data/train.h5"
 data_valid = "../cache/data/valid.h5"
 loss_type = "crossentropy"
-dropout_rate = 0.0
+dropout_rate = 0.1
 batch_size_train = 512
 batch_size_valid = 100
 
 [model]
-encoded_dims = 64
+encoded_dims = 128
 
 [model.doc_encoder]
 type = "nbow"

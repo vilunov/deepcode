@@ -1,34 +1,23 @@
+import logging
 from typing import Optional
 
+import numpy as np
 import torch
 from torch import optim
-import numpy as np
-import logging
 
 from deepcode.config import Config
-from deepcode.encoders import Encoder
 from deepcode.loss import *
-from deepcode.model import Model
 from deepcode.prefetcher import BackgroundGenerator
+from deepcode.scaffold import AbstractScaffold
 
-__all__ = ("Scaffold",)
+__all__ = ("TrainScaffold",)
 
 
-class Scaffold:
+class TrainScaffold(AbstractScaffold):
     def __init__(self, config: Config, weights_path: Optional[str]):
+        super().__init__(config, weights_path)
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self._init_data(config)
-        self.model = Model(
-            dropout_rate=config.training.dropout_rate,
-            encoders_code={
-                language: Encoder.from_config(encoder_config, config.model.encoded_dims)
-                for language, encoder_config in config.model.code_encoder.items()
-            },
-            encoder_doc=Encoder.from_config(config.model.doc_encoder, config.model.encoded_dims),
-        ).to(self.device)
-        if weights_path is not None:
-            self.model.load_state_dict(torch.load(weights_path, map_location=self.device))
-            logging.info(f"Loaded weights from file {weights_path}")
         self.__optimizer = optim.Adam(self.model.parameters(), lr=config.training.learning_rate)
         if config.training.loss_type == "triplet":
             if config.training.loss_margin is None:
