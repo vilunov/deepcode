@@ -12,6 +12,7 @@ toml = "^0.10.0"
 h5py = "^2.10"
 dacite = "^1.2"
 transformers = "^2.4"
+wandb = "^0.8.29"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"

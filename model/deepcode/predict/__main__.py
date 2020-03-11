@@ -4,6 +4,7 @@ import gzip
 import json
 
 import torch as t
+import wandb
 
 from deepcode.config import parse_config
 from deepcode.predict.scaffold import PredictScaffold
@@ -23,6 +24,7 @@ def arguments():
 
 def main():
     args = arguments()
+    wandb.init(name="test")
     with open(args.config, "r") as f:
         config = parse_config(f.read())
     with open(args.queries, "r") as f:
@@ -50,7 +52,7 @@ def main():
             encoded_code.append(encoder(tokens.unsqueeze(0), t.ones(1, tokens.shape[0], dtype=t.bool)))
         encoded_code = t.cat(encoded_code)
         distances = t.matmul(encoded_code, encoded_doc.T)
-        ranked = distances.argsort(dim=0)
+        ranked = distances.argsort(dim=0, descending=True)[:100, :]
         for query_id, ranked_query in enumerate(ranked.T):
             query = queries_text[query_id]
             for id in ranked_query:
@@ -58,6 +60,7 @@ def main():
                 line = f'{query},{snippet["language"]},{snippet["func_name"]},{snippet["url"]}\n'
                 output_file.write(line)
     output_file.close()
+    wandb.save(args.output)
 
 
 if __name__ == '__main__':

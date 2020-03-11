@@ -1,5 +1,6 @@
 # Project
 /resources
+/model/model_predictions.csv
 
 # Python
 .venv/
@@ -15,3 +16,4 @@ target/
 
 # Other
 .DS_Store
+wandb/
