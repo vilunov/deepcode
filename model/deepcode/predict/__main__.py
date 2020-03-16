@@ -5,6 +5,8 @@ import json
 
 import torch as t
 import wandb
+import pandas as pd
+from annoy import AnnoyIndex
 
 from deepcode.config import parse_config
 from deepcode.predict.scaffold import PredictScaffold
@@ -21,10 +23,30 @@ def arguments():
     print(args)
     return args
 
+class LangIndex:
+    def __init__(self, repr_size: int, index_type: str = "angular"):
+        super().__init__()
+        self.index = AnnoyIndex(repr_size, index_type)
+        self.func_names = []
+        self.urls = []
 
-def main():
+    def __len__(self):
+        return len(self.func_names)
+
+    def __getitem__(self, item):
+        return self.func_names[item], self.urls[item]
+
+    def append(self, repr, func_name, url):
+        idx = len(self)
+        self.index.add_item(idx, repr)
+        self.func_names.append(func_name)
+        self.urls.append(url)
+
+
+def main(enable_wandb: bool = False):
     args = arguments()
-    wandb.init(name="test")
+    if enable_wandb:
+        wandb.init(name="test")
     with open(args.config, "r") as f:
         config = parse_config(f.read())
     with open(args.queries, "r") as f:
@@ -33,34 +55,40 @@ def main():
     scaffold = PredictScaffold(config, args.model)
     queries = scaffold.tokenizer_doc.encode_batch(queries_text)
     encoded_doc = [scaffold.model.encoder_doc(t.tensor([q.ids]), t.ones(1, len(q), dtype=t.bool)) for q in queries]
-    encoded_doc = t.cat(encoded_doc)
-    output_file = open(args.output, "w")
-    output_file.write("query,language,identifier,url\n")
+
+    languages = config.model.code_encoder.keys()
+    indices = {lang: LangIndex(config.model.encoded_dims, "angular") for lang in languages}
     for data_file in args.data:
-        encoded_code = []
         with gzip.open(data_file, "r") as f:
             data = f.readlines()
         data = [json.loads(d) for d in data]
-        for i in range(len(data)):
-            snippet = data[i]
+        for i, snippet in enumerate(data):
             language = snippet["language"]
             tokenizer = scaffold.tokenizers_code[language]
             encoder = scaffold.model.encoders_code[language]
             tokens = snippet["code_tokens"]
             tokens = tokenizer.encode_batch(tokens)
             tokens = t.cat([t.tensor(i.ids, dtype=t.int64) for i in tokens])
-            encoded_code.append(encoder(tokens.unsqueeze(0), t.ones(1, tokens.shape[0], dtype=t.bool)))
-        encoded_code = t.cat(encoded_code)
-        distances = t.matmul(encoded_code, encoded_doc.T)
-        ranked = distances.argsort(dim=0, descending=True)[:100, :]
-        for query_id, ranked_query in enumerate(ranked.T):
+            repr = encoder(tokens.unsqueeze(0), t.ones(1, tokens.shape[0], dtype=t.bool))
+            indices[language].append(repr[0], snippet["func_name"], snippet["url"])
+
+    for i in indices.values():
+        i.index.build(10)
+
+    predictions = []
+    for language, index in indices.items():
+        for query_id, query_repr in enumerate(encoded_doc):
             query = queries_text[query_id]
-            for id in ranked_query:
-                snippet = data[id]
-                line = f'{query},{snippet["language"]},{snippet["func_name"]},{snippet["url"]}\n'
-                output_file.write(line)
-    output_file.close()
-    wandb.save(args.output)
+            ranked_ids = index.index.get_nns_by_vector(query_repr[0], 100)
+            for id in ranked_ids:
+                func_name = index.func_names[id]
+                url = index.urls[id]
+                predictions.append((query, language, func_name, url))
+
+    predictions = pd.DataFrame(predictions, columns=["query", "language", "identifier", "url"])
+    predictions.to_csv(args.output, index=False)
+    if enable_wandb:
+        wandb.save(args.output)
 
 
 if __name__ == '__main__':
