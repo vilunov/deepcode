@@ -13,7 +13,7 @@ from torch.utils.data import (
 
 __all__ = ("Datapoint", "CodeDataset", "open_data")
 
-Datapoint = Tuple[Tensor, Tensor, Tensor, Tensor]
+Datapoint = Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]
 
 
 class CodeDataset(Dataset):
@@ -23,14 +23,17 @@ class CodeDataset(Dataset):
         self.__language = language
 
     def __convert(self, dataset_entry) -> Tuple[str, Datapoint]:
-        code_len, code_vec, doc_len, doc_vec = dataset_entry
+        code_len, code_vec, doc_len, doc_vec, name_len, name_vec = dataset_entry
         code_vec = torch.tensor(code_vec.astype("int64"), device=self.__device)
         doc_vec = torch.tensor(doc_vec.astype("int64"), device=self.__device)
+        name_vec = torch.tensor(name_vec.astype("int64"), device=self.__device)
         code_mask = torch.zeros(code_vec.shape, dtype=torch.bool, device=self.__device)
         doc_mask = torch.zeros(doc_vec.shape, dtype=torch.bool, device=self.__device)
+        name_mask = torch.zeros(name_vec.shape, dtype=torch.bool, device=self.__device)
         code_mask[:code_len] = True
         doc_mask[:doc_len] = True
-        return self.__language, (code_vec, code_mask, doc_vec, doc_mask)
+        name_mask[:name_len] = True
+        return self.__language, (code_vec, code_mask, doc_vec, doc_mask, name_vec, name_mask)
 
     def __getitem__(self, item):
         return self.__convert(self.__data[item])

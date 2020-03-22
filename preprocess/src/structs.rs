@@ -2,6 +2,7 @@ use hdf5::H5Type;
 use serde::Deserialize;
 
 pub const MAX_LEN: usize = 1024;
+pub const MAX_NAME_LEN: usize = 32;
 
 #[derive(Deserialize)]
 pub struct SnippetCode {
@@ -11,12 +12,14 @@ pub struct SnippetCode {
 #[derive(Deserialize)]
 pub struct SnippetDoc {
     pub docstring_tokens: Vec<String>,
+    pub func_name: String,
 }
 
 #[derive(Deserialize)]
 pub struct SnippetBoth {
     pub code_tokens: Vec<String>,
     pub docstring_tokens: Vec<String>,
+    pub func_name: String,
 }
 
 #[repr(C)]
@@ -26,4 +29,6 @@ pub struct Snippet {
     pub code_tokens: [u32; MAX_LEN],
     pub doc_len: usize,
     pub doc_tokens: [u32; MAX_LEN],
+    pub name_len: usize,
+    pub name_tokens: [u32; MAX_NAME_LEN],
 }

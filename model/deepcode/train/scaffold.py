@@ -16,7 +16,6 @@ __all__ = ("TrainScaffold",)
 class TrainScaffold(AbstractScaffold):
     def __init__(self, config: Config, weights_path: Optional[str]):
         super().__init__(config, weights_path)
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self._init_data(config)
         self.__optimizer = optim.Adam(self.model.parameters(), lr=config.training.learning_rate)
         if config.training.loss_type == "triplet":

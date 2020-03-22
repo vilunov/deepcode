@@ -1,5 +1,7 @@
 use glob::glob;
 use libflate::gzip::Decoder;
+use regex::Regex;
+use lazy_static::lazy_static;
 use serde_json::Deserializer;
 use tokenizers::models::bpe::{BpeTrainer, BPE};
 use tokenizers::tokenizer::Model;
@@ -78,6 +80,9 @@ fn process_docs(name: &'static str) {
             for token in snippet.docstring_tokens {
                 *counter.entry(token).or_insert(0) += 1;
             }
+            for token in split_identifier(&snippet.func_name) {
+                *counter.entry(token).or_insert(0) += 1;
+            }
         }
     }
     let trainer = BpeTrainer::new(0, 32767);
@@ -90,6 +95,16 @@ pub fn build_vocabs() {
         process_code(lang);
     }
     process_docs("doc");
+}
+
+pub fn split_identifier(id: &str) -> Vec<String> {
+    use std::borrow::Borrow;
+    lazy_static! {
+        static ref RE1: Regex = Regex::new(r"(?P<last>[A-Z])").unwrap();
+        static ref RE2: Regex = Regex::new(r"[^\p{Alphabetic}]").unwrap();
+    }
+    let pass1 = RE1.replace_all(id, "-$last");
+    RE2.split(pass1.borrow()).filter(|&i| !i.is_empty()).map(|i| i.to_lowercase()).collect::<Vec<_>>()
 }
 
 fn convert_to_h5(
@@ -129,17 +144,26 @@ fn convert_to_h5(
             .into_iter()
             .flat_map(|i| vocab_doc.token_to_id(&i))
             .collect::<Vec<_>>();
+        let name_vec = split_identifier(&snippet.func_name)
+            .into_iter()
+            .flat_map(|i| vocab_doc.token_to_id(&i))
+            .collect::<Vec<_>>();
         let mut code_tokens = [0; MAX_LEN];
         let mut doc_tokens = [0; MAX_LEN];
+        let mut name_tokens = [0; MAX_NAME_LEN];
         let code_len = code_vec.len().min(MAX_LEN);
         let doc_len = doc_vec.len().min(MAX_LEN);
+        let name_len = name_vec.len().min(MAX_NAME_LEN);
         code_tokens[..code_len].copy_from_slice(&code_vec[..code_len]);
         doc_tokens[..doc_len].copy_from_slice(&doc_vec[..doc_len]);
+        name_tokens[..name_len].copy_from_slice(&name_vec[..name_len]);
         Snippet {
             code_len,
             code_tokens,
             doc_len,
             doc_tokens,
+            name_len,
+            name_tokens,
         }
     };
 
@@ -154,7 +178,7 @@ fn convert_to_h5(
                     .into_iter::<SnippetBoth>()
                     .map(Result::unwrap)
                     .map(convert_snippet)
-                    .filter(|snippet| snippet.code_len > 0 && snippet.doc_len > 0)
+                    .filter(|snippet| snippet.code_len > 0 && snippet.doc_len > 0 && snippet.name_len > 0)
             })
             .collect::<Vec<_>>();
         dbg!(snippets.len());
