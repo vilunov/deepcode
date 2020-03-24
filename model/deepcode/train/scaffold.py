@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 import numpy as np
@@ -6,7 +5,7 @@ import torch
 from torch import optim
 
 from deepcode.config import Config
-from deepcode.loss import *
+from deepcode.train.loss import *
 from deepcode.prefetcher import BackgroundGenerator
 from deepcode.scaffold import AbstractScaffold
 
