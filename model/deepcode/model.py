@@ -1,11 +1,13 @@
-from typing import Dict
+from typing import Dict, Tuple
 
 import torch
-from torch import nn
+from torch import nn, Tensor
 
 from deepcode.encoders import *
 
-__all__ = ("Model",)
+__all__ = ("Model", "SnippetInput")
+
+SnippetInput = Tuple[Tensor, Tensor, Tensor, Tensor]
 
 
 class Model(nn.Module):
@@ -18,10 +20,10 @@ class Model(nn.Module):
         self.add_module("encoder_doc", self.encoder_doc)
         self.dropout = nn.Dropout(p=dropout_rate)
 
-    def forward(self, snippet_dict):
+    def forward(self, snippet_dict: Dict[str, SnippetInput]):
         encoded_codes, encoded_docs = [], []
-        for language, (code_vec, code_mask, _, _, name_vec, name_mask) in snippet_dict.items():
+        for language, (code_vec, code_mask, doc_vec, doc_mask) in snippet_dict.items():
             encoder_code = self.encoders_code[language]
             encoded_codes.append(encoder_code(code_vec, code_mask))
-            encoded_docs.append(self.encoder_doc(name_vec, name_mask))
+            encoded_docs.append(self.encoder_doc(doc_vec, doc_mask))
         return self.dropout(torch.cat(encoded_codes)), self.dropout(torch.cat(encoded_docs))

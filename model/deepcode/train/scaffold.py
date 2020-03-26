@@ -3,6 +3,7 @@ from typing import Optional
 import numpy as np
 import torch
 from torch import optim
+from torch.distributions.binomial import Binomial
 
 from deepcode.config import Config
 from deepcode.train.loss import *
@@ -25,6 +26,21 @@ class TrainScaffold(AbstractScaffold):
             self.__loss = LossCrossEntropy()
         else:
             raise ValueError(f"Incorrect loss type: {config.training.loss_type}, expected triplet or crossentropy")
+        self.__choice_distribution = Binomial(probs=0.1)
+
+    def stochastic_choice(self, doc_vec, doc_mask, name_vec, name_mask):
+        choices = self.__choice_distribution.sample((doc_vec.size(0),)).type(torch.bool)
+        name_vec_pad = torch.zeros(
+            name_vec.size(0), doc_vec.size(1) - name_vec.size(1), dtype=name_vec.dtype, device=self.device
+        )
+        name_mask_pad = torch.zeros(
+            name_mask.size(0), doc_mask.size(1) - name_mask.size(1), dtype=name_mask.dtype, device=self.device
+        )
+        name_vec = torch.cat([name_vec, name_vec_pad], dim=1)
+        name_mask = torch.cat([name_mask, name_mask_pad], dim=1)
+        doc_vec[choices] = name_vec[choices]
+        doc_mask[choices] = name_mask[choices]
+        return doc_vec, doc_mask
 
     def _init_data(self, config: Config):
         import h5py
@@ -58,7 +74,11 @@ class TrainScaffold(AbstractScaffold):
         losses = np.zeros(len(self.train_data))
         train_data = BackgroundGenerator(self.train_data)
         for iteration, snippet_dict in enumerate(train_data):
-            encoded_code, encoded_doc = self.model(snippet_dict)
+            model_input = {
+                key: (code_vec, code_mask) + self.stochastic_choice(doc_vec, doc_mask, name_vec, name_mask)
+                for key, (code_vec, code_mask, doc_vec, doc_mask, name_vec, name_mask) in snippet_dict.items()
+            }
+            encoded_code, encoded_doc = self.model(model_input)
             self.__optimizer.zero_grad()
             loss = self.__loss(encoded_code, encoded_doc)
             loss.backward()
@@ -87,7 +107,11 @@ class TrainScaffold(AbstractScaffold):
         mrr_sum, mrr_num = 0.0, 0
         pbar = tqdm(desc=f"Calculating MRR of {name}", total=len(self.valid_data[name]))
         for snippet_dict in self.valid_data[name]:
-            encoded_code, encoded_doc = self.model(snippet_dict)
+            model_input = {
+                key: (code_vec, code_mask) + self.stochastic_choice(doc_vec, doc_mask, name_vec, name_mask)
+                for key, (code_vec, code_mask, doc_vec, doc_mask, name_vec, name_mask) in snippet_dict.items()
+            }
+            encoded_code, encoded_doc = self.model(model_input)
             distances = torch.matmul(encoded_code, encoded_doc.T)
             weights = distances.diag()
             mrr_sum += (distances >= weights.unsqueeze(1)).sum(dim=1).type(torch.float32).reciprocal().mean().item()
