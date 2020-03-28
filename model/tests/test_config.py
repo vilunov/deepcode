@@ -11,6 +11,7 @@ loss_type = "crossentropy"
 dropout_rate = 0.2
 batch_size_train = 512
 batch_size_valid = 100
+func_name_share = 0.1
 
 [model]
 encoded_dims = 128
@@ -30,9 +31,15 @@ type = "nbow"
             loss_type="crossentropy",
             loss_margin=None,
             dropout_rate=0.2,
-            batch_size=512,
+            batch_size_train=512,
+            batch_size_valid=100,
+            func_name_share=0.1,
         ),
-        model=Model(encoded_dims=128, doc_encoder=Encoder(type="nbow"), code_encoder={"go": Encoder(type="nbow")}),
+        model=Model(
+            encoded_dims=128,
+            doc_encoder=Encoder(type="nbow", pooling_type=None),
+            code_encoder={"go": Encoder(type="nbow", pooling_type=None)},
+        ),
     )
 
     assert parsed == expected

@@ -26,7 +26,7 @@ class TrainScaffold(AbstractScaffold):
             self.__loss = LossCrossEntropy()
         else:
             raise ValueError(f"Incorrect loss type: {config.training.loss_type}, expected triplet or crossentropy")
-        self.__choice_distribution = Binomial(probs=0.1)
+        self.__choice_distribution = Binomial(probs=config.training.func_name_share)
 
     def stochastic_choice(self, doc_vec, doc_mask, name_vec, name_mask):
         choices = self.__choice_distribution.sample((doc_vec.size(0),)).type(torch.bool)

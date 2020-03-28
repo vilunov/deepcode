@@ -23,6 +23,7 @@ class Training:
     dropout_rate: float
     batch_size_train: int
     batch_size_valid: int
+    func_name_share: float
 
 
 @dataclass

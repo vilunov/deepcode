@@ -6,5 +6,5 @@ def main():
     wandb.save("model_predictions.csv")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

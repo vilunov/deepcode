@@ -56,7 +56,12 @@ def main(enable_wandb: bool = True):
     queries_text = [q[0] for q in queries]
     scaffold = PredictScaffold(config, args.model)
     queries = scaffold.tokenizer_doc.encode_batch(queries_text)
-    encoded_doc = [scaffold.model.encoder_doc(t.tensor([q.ids], device=scaffold.device), t.ones(1, len(q), dtype=t.bool, device=scaffold.device)) for q in queries]
+    encoded_doc = [
+        scaffold.model.encoder_doc(
+            t.tensor([q.ids], device=scaffold.device), t.ones(1, len(q), dtype=t.bool, device=scaffold.device)
+        )
+        for q in queries
+    ]
 
     predictions = []
     for data_file in args.data:
