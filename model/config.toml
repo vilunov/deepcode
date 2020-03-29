@@ -3,10 +3,10 @@ learning_rate = 0.01
 data_train = "../cache/data/train.h5"
 data_valid = "../cache/data/valid.h5"
 loss_type = "crossentropy"
-dropout_rate = 0.1
+dropout_rate = 0.15
 batch_size_train = 512
 batch_size_valid = 100
-func_name_share = 0.1
+func_name_share = 0.15
 
 [model]
 encoded_dims = 128

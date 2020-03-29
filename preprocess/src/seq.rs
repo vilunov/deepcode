@@ -1,7 +1,5 @@
 use glob::glob;
 use libflate::gzip::Decoder;
-use regex::Regex;
-use lazy_static::lazy_static;
 use serde_json::Deserializer;
 use tokenizers::models::bpe::{BpeTrainer, BPE};
 use tokenizers::tokenizer::Model;
@@ -11,7 +9,9 @@ use std::fs::File;
 use std::path::Path;
 
 mod structs;
+mod utils;
 use crate::structs::*;
+use crate::utils::*;
 
 const LANGS: &[&'static str] = &["go", "java", "javascript", "php", "python", "ruby"];
 
@@ -97,16 +97,6 @@ pub fn build_vocabs() {
     process_docs("doc");
 }
 
-pub fn split_identifier(id: &str) -> Vec<String> {
-    use std::borrow::Borrow;
-    lazy_static! {
-        static ref RE1: Regex = Regex::new(r"(?P<last>[A-Z])").unwrap();
-        static ref RE2: Regex = Regex::new(r"[^\p{Alphabetic}]").unwrap();
-    }
-    let pass1 = RE1.replace_all(id, "-$last");
-    RE2.split(pass1.borrow()).filter(|&i| !i.is_empty()).map(|i| i.to_lowercase()).collect::<Vec<_>>()
-}
-
 fn convert_to_h5(
     train: &mut hdf5::File,
     valid: &mut hdf5::File,
@@ -178,7 +168,9 @@ fn convert_to_h5(
                     .into_iter::<SnippetBoth>()
                     .map(Result::unwrap)
                     .map(convert_snippet)
-                    .filter(|snippet| snippet.code_len > 0 && snippet.doc_len > 0 && snippet.name_len > 0)
+                    .filter(|snippet| {
+                        snippet.code_len > 0 && snippet.doc_len > 0 && snippet.name_len > 0
+                    })
             })
             .collect::<Vec<_>>();
         dbg!(snippets.len());
