@@ -30,6 +30,7 @@ class Training:
 class Encoder:
     type: str
     pooling_type: Optional[PoolingType]
+    vocabulary_size: Optional[int]
 
 
 @dataclass

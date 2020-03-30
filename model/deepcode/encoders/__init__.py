@@ -14,7 +14,9 @@ class Encoder(nn.Module):
         if config.type == "nbow":
             if config.pooling_type is None:
                 raise ValueError("Pooling type is required for neural bag of word encoders")
-            return BagOfWords(32767, encoded_size, config.pooling_type)
+            if config.vocabulary_size is None:
+                raise ValueError("Vocabulary size is required for neural bag of word encoders")
+            return BagOfWords(config.vocabulary_size, encoded_size, config.pooling_type)
         else:
             raise ValueError(f"Unknown encoder type: {config.type}")
 

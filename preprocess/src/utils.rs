@@ -2,6 +2,27 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Borrow;
 
+pub const LANGS: &[&'static str] = &["go", "java", "javascript", "php", "python", "ruby"];
+
+pub fn train_glob_pattern(language: &'static str) -> String {
+    format!(
+        "../resources/data/{}/final/jsonl/train/**/*.jsonl.gz",
+        language
+    )
+}
+
+pub fn valid_test_glob_pattern(language: &'static str) -> (String, String) {
+    let valid = format!(
+        "../resources/data/{}/final/jsonl/valid/**/*.jsonl.gz",
+        language
+    );
+    let test = format!(
+        "../resources/data/{}/final/jsonl/test/**/*.jsonl.gz",
+        language
+    );
+    (valid, test)
+}
+
 lazy_static! {
     static ref RE1: Regex = Regex::new(r"(?P<last>[A-Z])").unwrap();
     static ref RE2: Regex = Regex::new(r"[^\p{Alphabetic}]").unwrap();

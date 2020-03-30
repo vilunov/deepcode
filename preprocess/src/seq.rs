@@ -13,27 +13,6 @@ mod utils;
 use crate::structs::*;
 use crate::utils::*;
 
-const LANGS: &[&'static str] = &["go", "java", "javascript", "php", "python", "ruby"];
-
-fn train_glob_pattern(language: &'static str) -> String {
-    format!(
-        "../resources/data/{}/final/jsonl/train/**/*.jsonl.gz",
-        language
-    )
-}
-
-fn valid_test_glob_pattern(language: &'static str) -> (String, String) {
-    let valid = format!(
-        "../resources/data/{}/final/jsonl/valid/**/*.jsonl.gz",
-        language
-    );
-    let test = format!(
-        "../resources/data/{}/final/jsonl/test/**/*.jsonl.gz",
-        language
-    );
-    (valid, test)
-}
-
 fn filter(token: &str) -> bool {
     !token.starts_with("//")
         && !token.starts_with("#")
@@ -61,7 +40,7 @@ fn process_code(language: &'static str) {
         }
     }
     counter.retain(|k, _| filter(k.as_str()));
-    let trainer = BpeTrainer::new(0, 32767);
+    let trainer = BpeTrainer::new(0, 10000);
     let model = trainer.train(counter).unwrap();
     model.save(Path::new("../cache/vocabs"), &name).unwrap();
 }
@@ -85,7 +64,7 @@ fn process_docs(name: &'static str) {
             }
         }
     }
-    let trainer = BpeTrainer::new(0, 32767);
+    let trainer = BpeTrainer::new(0, 15000);
     let model = trainer.train(counter).unwrap();
     model.save(Path::new("../cache/vocabs"), name).unwrap();
 }
