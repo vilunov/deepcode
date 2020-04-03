@@ -2,7 +2,7 @@ use glob::glob;
 use libflate::gzip::Decoder;
 use serde_json::Deserializer;
 use tokenizers::models::bpe::{BpeTrainer, BPE};
-use tokenizers::tokenizer::Model;
+use tokenizers::tokenizer::{EncodeInput, Model, Tokenizer};
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -40,7 +40,7 @@ fn process_code(language: &'static str) {
         }
     }
     counter.retain(|k, _| filter(k.as_str()));
-    let trainer = BpeTrainer::new(0, 10000);
+    let trainer = BpeTrainer::new(0, 12000);
     let model = trainer.train(counter).unwrap();
     model.save(Path::new("../cache/vocabs"), &name).unwrap();
 }
@@ -64,7 +64,7 @@ fn process_docs(name: &'static str) {
             }
         }
     }
-    let trainer = BpeTrainer::new(0, 15000);
+    let trainer = BpeTrainer::new(0, 32000);
     let model = trainer.train(counter).unwrap();
     model.save(Path::new("../cache/vocabs"), name).unwrap();
 }
@@ -93,6 +93,7 @@ fn convert_to_h5(
     .unwrap()
     .build()
     .unwrap();
+    let tokenizer_code = Tokenizer::new(Box::new(vocab_code));
 
     let vocab_doc = BPE::from_files(
         "../cache/vocabs/doc-vocab.json",
@@ -101,22 +102,41 @@ fn convert_to_h5(
     .unwrap()
     .build()
     .unwrap();
+    let tokenizer_doc = Tokenizer::new(Box::new(vocab_doc));
 
     let convert_snippet = |snippet: SnippetBoth| {
-        let code_vec = snippet
+        let code_vec: Vec<u32> = snippet
             .code_tokens
             .into_iter()
-            .flat_map(|i| vocab_code.token_to_id(&i))
-            .collect::<Vec<_>>();
-        let doc_vec = snippet
+            .flat_map(|i| {
+                tokenizer_code
+                    .encode(EncodeInput::Single(i))
+                    .unwrap()
+                    .get_ids()
+                    .to_vec()
+            })
+            .collect::<Vec<u32>>();
+        let doc_vec: Vec<u32> = snippet
             .docstring_tokens
             .into_iter()
-            .flat_map(|i| vocab_doc.token_to_id(&i))
-            .collect::<Vec<_>>();
+            .flat_map(|i| {
+                tokenizer_doc
+                    .encode(EncodeInput::Single(i))
+                    .unwrap()
+                    .get_ids()
+                    .to_vec()
+            })
+            .collect::<Vec<u32>>();
         let name_vec = split_identifier(&snippet.func_name)
             .into_iter()
-            .flat_map(|i| vocab_doc.token_to_id(&i))
-            .collect::<Vec<_>>();
+            .flat_map(|i| {
+                tokenizer_doc
+                    .encode(EncodeInput::Single(i))
+                    .unwrap()
+                    .get_ids()
+                    .to_vec()
+            })
+            .collect::<Vec<u32>>();
         let mut code_tokens = [0; MAX_LEN];
         let mut doc_tokens = [0; MAX_LEN];
         let mut name_tokens = [0; MAX_NAME_LEN];
