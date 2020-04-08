@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function lang_path {
-  echo "../resources/data/$1_dedupe_definitions_v2.pkl"
+  echo "../resources/$1.jsonl.gz"
 }
 
 m="../cache/models/2020.04.06_18.24.03-go-java-256/2.pickle"
@@ -43,3 +43,4 @@ python -m deepcode.predict \
   -o "$o" \
   -m "$m"\
   -c "$c"
+

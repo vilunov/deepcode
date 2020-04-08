@@ -6,10 +6,13 @@ import os
 import glob
 import gc
 from collections import defaultdict
+import multiprocessing
 
+import parmap
 import torch as t
 import pandas as pd
 from annoy import AnnoyIndex
+from tqdm import tqdm
 
 from deepcode.config import parse_config
 from deepcode.predict.scaffold import PredictScaffold
@@ -45,7 +48,17 @@ class LangIndex:
         self.urls.append(url)
 
 
+def process(snippet, device):
+    from tok import tokenizers_code
+    tokenizer = tokenizers_code[snippet["language"]]
+    tokens = snippet["function_tokens"]
+    tokens = tokenizer.encode_batch(tokens)
+    tokens = t.cat([t.tensor(i.ids, dtype=t.int64, device=device) for i in tokens])
+    return (tokens, snippet["identifier"], snippet["url"])
+
+
 def main():
+    pool = multiprocessing.Pool()
     logging.basicConfig(level=logging.INFO)
     args = arguments()
     with open(args.queries, "r") as f:
@@ -78,17 +91,15 @@ def main():
     logging.info(f"Loaded all queries {queries_ids.shape}")
     data_new = defaultdict(list)
     for data_file in args.data:
+        logging.info(f"Loading from {data_file}")
         with open(data_file, "rb") as f:
             data = pickle.load(f)
         logging.info(f"Data loaded from {data_file}, len = {len(data)}")
-        for snippet in data:
-            language = snippet["language"]
-            tokenizer = scaffold.tokenizers_code[language]
-            tokens = snippet["function_tokens"]
-            tokens = tokenizer.encode_batch(tokens)
-            tokens = t.cat([t.tensor(i.ids, dtype=t.int64, device=scaffold.device) for i in tokens])
-            data_new[language].append((tokens, snippet["identifier"], snippet["url"]))
+        language = data[0]["language"]
+        processed = parmap.map(process, data, scaffold.device, pm_pool=pool, pm_pbar=True)
         del data
+        data_new[language] = processed 
+        logging.info(f"Processed {data_file}")
         gc.collect()
     logging.info("Loaded all data")
 
@@ -131,3 +142,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

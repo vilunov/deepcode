@@ -1,5 +1,6 @@
 from typing import Dict, Callable
 
+import torch as t
 from torch import Tensor
 
 from deepcode.config import PoolingType
@@ -12,7 +13,7 @@ def mean(tensor: Tensor, mask: Tensor) -> Tensor:
     tensor[~mask] = 0
     tensor = tensor.sum(-2)
     mask = mask.sum(-1)
-    return tensor / mask.unsqueeze(1)
+    return tensor / mask.unsqueeze(1).type(t.float32)
 
 
 def max(tensor: Tensor, mask: Tensor) -> Tensor:
