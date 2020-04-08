@@ -1,21 +1,25 @@
 import argparse
 import csv
+import gzip
+import json
 import logging
-import pickle
 
+import h5py
+import pandas as pd
 import torch as t
 import wandb
-import pandas as pd
 from annoy import AnnoyIndex
 
 from deepcode.config import parse_config
 from deepcode.predict.scaffold import PredictScaffold
+from deepcode.predict.data import open_data, CodeDataset
 
 
 def arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-q", "--queries", type=str, required=True, dest="queries", help="input queries file")
-    parser.add_argument("-d", "--data", type=str, required=True, dest="data", help="input data files", nargs="+")
+    parser.add_argument("-d", "--data", type=str, required=True, dest="data", help="input metadata files", nargs="+")
+    parser.add_argument("-t", "--tokens", type=str, required=True, dest="tokens", help="input tokens file", nargs="+")
     parser.add_argument("-o", "--output", type=str, required=True, dest="output", help="output predictions file")
     parser.add_argument("-m", "--model", type=str, required=True, dest="model", help="model weights file")
     parser.add_argument("-c", "--config", type=str, required=True, dest="config", help="model configuration file")
@@ -64,22 +68,26 @@ def main(enable_wandb: bool = True):
     ]
 
     predictions = []
+    h5_file = h5py.File("../cache/data/search.h5", "r")
+    tokens_datasets = {
+        lang: CodeDataset(h5_file["go"], "go", scaffold.device)
+        for lang in ["go", "java", "javascript", "ruby", "python", "php"]
+    }
     for data_file in args.data:
         index = LangIndex(config.model.encoded_dims, "angular")
-        with open(data_file, "rb") as f:
-            data = pickle.load(f)
-        logging.info(f"Data loaded from {data_file}, len = {len(data)}")
+        f = gzip.open(data_file, "rt")
         language: str = ""
-        for i, snippet in enumerate(data):
+        snippet = f.readline()
+        i = 0
+        while snippet:
+            snippet = json.loads(snippet)
             language = snippet["language"]
-            tokenizer = scaffold.tokenizers_code[language]
             encoder = scaffold.model.encoders_code[language]
-            tokens = snippet["function_tokens"]
-            tokens = tokenizer.encode_batch(tokens)
-            tokens = t.cat([t.tensor(i.ids, dtype=t.int64, device=scaffold.device) for i in tokens])
-            repr = encoder(tokens.unsqueeze(0), t.ones(1, tokens.shape[0], dtype=t.bool, device=scaffold.device))
+            _, (tokens, mask) = tokens_datasets[language][i]
+            repr = encoder(tokens.unsqueeze(0), mask.unsqueeze(0))
             index.append(repr[0], snippet["identifier"], snippet["url"])
-        del data
+            snippet = f.readline()
+            i += 1
         index.index.build(10)
         logging.info(f"Built index for {language}")
 
