@@ -7,7 +7,7 @@ dropout_rate = 0.15
 batch_size_train = 2048
 batch_size_valid = 100
 func_name_share = 0.15
-title="go-ruby-256"
+title="java-python-256"
 
 [model]
 encoded_dims = 256
@@ -17,12 +17,12 @@ type = "nbow"
 pooling_type = "mean"
 vocabulary_size = 32000
 
-[model.code_encoder.go]
+[model.code_encoder.java]
 type = "nbow"
 pooling_type = "mean"
 vocabulary_size = 12000 
 
-[model.code_encoder.ruby]
+[model.code_encoder.python]
 type = "nbow"
 pooling_type = "mean"
 vocabulary_size = 12000 

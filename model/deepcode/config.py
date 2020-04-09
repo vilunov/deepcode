@@ -24,6 +24,8 @@ class Training:
     batch_size_train: int
     batch_size_valid: int
     func_name_share: float
+    title: Optional[str]
+    epochs: int = 10
 
 
 @dataclass
