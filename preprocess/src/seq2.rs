@@ -66,7 +66,6 @@ fn convert_to_h5(file: &mut hdf5::File, lang: &'static str) {
                 .into_iter::<SnippetSearch>()
                 .map(Result::unwrap)
                 .map(convert_snippet)
-                .filter(|snippet| snippet.code_len > 0)
         })
         .collect::<Vec<_>>();
     dbg!(snippets.len());

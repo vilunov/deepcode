@@ -9,18 +9,18 @@ import pandas as pd
 import torch as t
 import wandb
 from annoy import AnnoyIndex
+from tqdm import tqdm
 
 from deepcode.config import parse_config
+from deepcode.predict.data import CodeDataset
 from deepcode.predict.scaffold import PredictScaffold
-from deepcode.predict.data import open_data, CodeDataset
 
 
 def arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-q", "--queries", type=str, required=True, dest="queries", help="input queries file")
-    parser.add_argument("-d", "--data", type=str, required=True, dest="data", help="input metadata files", nargs="+")
-    parser.add_argument("-t", "--tokens", type=str, required=True, dest="tokens", help="input tokens file", nargs="+")
     parser.add_argument("-o", "--output", type=str, required=True, dest="output", help="output predictions file")
+    parser.add_argument("-l", "--languages", type=str, required=True, dest="languages", help="languages", nargs="+")
     parser.add_argument("-m", "--model", type=str, required=True, dest="model", help="model weights file")
     parser.add_argument("-c", "--config", type=str, required=True, dest="config", help="model configuration file")
     args = parser.parse_args()
@@ -48,7 +48,7 @@ class LangIndex:
         self.urls.append(url)
 
 
-def main(enable_wandb: bool = True):
+def main(enable_wandb: bool = False):
     logging.basicConfig(level=logging.INFO)
     args = arguments()
     if enable_wandb:
@@ -69,25 +69,19 @@ def main(enable_wandb: bool = True):
 
     predictions = []
     h5_file = h5py.File("../cache/data/search.h5", "r")
-    tokens_datasets = {
-        lang: CodeDataset(h5_file["go"], "go", scaffold.device)
-        for lang in ["go", "java", "javascript", "ruby", "python", "php"]
-    }
-    for data_file in args.data:
+    for language in args.languages:
+        logging.info(f"Starting on {language}")
+        tokens_dataset = CodeDataset(h5_file[language], language, scaffold.device)
+        encoder_code = scaffold.model.encoders_code[language]
+        data_file = f"../cache/data-test/{language}.jsonl.gz"
         index = LangIndex(config.model.encoded_dims, "angular")
         f = gzip.open(data_file, "rt")
-        language: str = ""
-        snippet = f.readline()
-        i = 0
-        while snippet:
-            snippet = json.loads(snippet)
-            language = snippet["language"]
-            encoder = scaffold.model.encoders_code[language]
-            _, (tokens, mask) = tokens_datasets[language][i]
-            repr = encoder(tokens.unsqueeze(0), mask.unsqueeze(0))
-            index.append(repr[0], snippet["identifier"], snippet["url"])
+        for _, (tokens, mask) in tqdm(tokens_dataset):
             snippet = f.readline()
-            i += 1
+            snippet = json.loads(snippet)
+            repr = encoder_code(tokens.unsqueeze(0), mask.unsqueeze(0))
+            index.append(repr[0], snippet["identifier"], snippet["url"])
+        f.close()
         index.index.build(10)
         logging.info(f"Built index for {language}")
 
@@ -99,6 +93,7 @@ def main(enable_wandb: bool = True):
                 url = index.urls[id]
                 predictions.append((query, language, func_name, url))
         logging.info(f"Predictions complete for {language}")
+    h5_file.close()
 
     predictions = pd.DataFrame(predictions, columns=["query", "language", "identifier", "url"])
     predictions.to_csv(args.output, index=False)
