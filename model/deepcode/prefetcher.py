@@ -19,6 +19,9 @@ class BackgroundGenerator(threading.Thread):
             raise StopIteration
         return next_item
 
+    def __len__(self):
+        return len(self.generator)
+
     def run(self):
         for item in self.generator:
             self.queue.put(item)

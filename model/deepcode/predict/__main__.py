@@ -9,11 +9,17 @@ import pandas as pd
 import torch as t
 import wandb
 from annoy import AnnoyIndex
+from torch.utils.data import (
+    SequentialSampler,
+    BatchSampler,
+    DataLoader,
+)
 from tqdm import tqdm
 
 from deepcode.config import parse_config
-from deepcode.predict.data import CodeDataset
+from deepcode.predict.data import CodeDataset, collate
 from deepcode.predict.scaffold import PredictScaffold
+from deepcode.prefetcher import BackgroundGenerator
 
 
 def arguments():
@@ -72,15 +78,19 @@ def main(enable_wandb: bool = False):
     for language in args.languages:
         logging.info(f"Starting on {language}")
         tokens_dataset = CodeDataset(h5_file[language], language, scaffold.device)
+        sampler = BatchSampler(SequentialSampler(tokens_dataset), batch_size=1024, drop_last=False)
+        tokens_dataloader = BackgroundGenerator(DataLoader(tokens_dataset, batch_sampler=sampler, collate_fn=collate), buffer_size=256)
         encoder_code = scaffold.model.encoders_code[language]
         data_file = f"../cache/data-test/{language}.jsonl.gz"
         index = LangIndex(config.model.encoded_dims, "angular")
         f = gzip.open(data_file, "rt")
-        for _, (tokens, mask) in tqdm(tokens_dataset):
-            snippet = f.readline()
-            snippet = json.loads(snippet)
-            repr = encoder_code(tokens.unsqueeze(0), mask.unsqueeze(0))
-            index.append(repr[0], snippet["identifier"], snippet["url"])
+        for batch in tqdm(tokens_dataloader):
+            tokens, mask = batch[language]
+            repr = encoder_code(tokens, mask)
+            for r in repr:
+                snippet = f.readline()
+                snippet = json.loads(snippet)
+                index.append(r, snippet["identifier"], snippet["url"])
         f.close()
         index.index.build(10)
         logging.info(f"Built index for {language}")
