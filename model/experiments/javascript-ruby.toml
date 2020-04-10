@@ -1,0 +1,29 @@
+[training]
+learning_rate = 0.01
+data_train = "../cache/data/train.h5"
+data_valid = "../cache/data/valid.h5"
+loss_type = "crossentropy"
+dropout_rate = 0.15
+batch_size_train = 2048
+batch_size_valid = 100
+func_name_share = 0.15
+title="javascript-ruby-256"
+
+[model]
+encoded_dims = 256
+
+[model.doc_encoder]
+type = "nbow"
+pooling_type = "mean"
+vocabulary_size = 32000
+
+[model.code_encoder.javascript]
+type = "nbow"
+pooling_type = "mean"
+vocabulary_size = 12000
+
+[model.code_encoder.ruby]
+type = "nbow"
+pooling_type = "mean"
+vocabulary_size = 12000
+
