@@ -6,7 +6,11 @@ use crate::parsers::*;
 fn traverse(node: &Node, src: &str) {
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
-        dbg!(child.utf8_text(src.as_bytes()).unwrap(), child.id(), child.kind_id());
+        dbg!(
+            child.utf8_text(src.as_bytes()).unwrap(),
+            child.id(),
+            child.kind_id()
+        );
         traverse(&child, src);
     }
 }

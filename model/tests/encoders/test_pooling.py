@@ -1,5 +1,6 @@
 import torch
 
+from deepcode.config import PoolingType
 from deepcode.encoders.pooling import *
 
 

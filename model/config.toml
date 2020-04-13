@@ -1,7 +1,7 @@
 [training]
 learning_rate = 0.01
-data_train = "../cache/data/train.h5"
-data_valid = "../cache/data/valid.h5"
+data_train = "../cache/data/glove/train.h5"
+data_valid = "../cache/data/glove/valid.h5"
 loss_type = "crossentropy"
 dropout_rate = 0.15
 batch_size_train = 2048
@@ -9,12 +9,12 @@ batch_size_valid = 100
 func_name_share = 0.15
 
 [model]
-encoded_dims = 128 
+encoded_dims = 50
 
 [model.doc_encoder]
 type = "nbow"
 pooling_type = "mean"
-vocabulary_size = 32000
+weights_path = "../cache/glove-weights.np"
 
 [model.code_encoder.go]
 type = "nbow"

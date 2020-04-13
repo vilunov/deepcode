@@ -30,9 +30,9 @@ fn convert_to_h5(file: &mut hdf5::File, lang: &'static str) {
         &format!("../cache/vocabs/code-{}-vocab.json", lang),
         &format!("../cache/vocabs/code-{}-merges.txt", lang),
     )
-        .unwrap()
-        .build()
-        .unwrap();
+    .unwrap()
+    .build()
+    .unwrap();
     let tokenizer_code = Tokenizer::new(Box::new(vocab_code));
 
     let convert_snippet = |snippet: SnippetSearch| {

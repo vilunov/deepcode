@@ -1,5 +1,6 @@
-import torch
+import torch as t
 from torch import nn
+import numpy as np
 
 from deepcode import config
 from deepcode.config import PoolingType
@@ -14,19 +15,34 @@ class Encoder(nn.Module):
         if config.type == "nbow":
             if config.pooling_type is None:
                 raise ValueError("Pooling type is required for neural bag of word encoders")
-            if config.vocabulary_size is None:
-                raise ValueError("Vocabulary size is required for neural bag of word encoders")
-            return BagOfWords(config.vocabulary_size, encoded_size, config.pooling_type)
+            if config.weights_path is not None:
+                weights = np.fromfile(config.weights_path).reshape(-1, encoded_size)
+                weights = t.tensor(weights)
+                return BagOfWords.from_weights(weights, config.pooling_type)
+            else:
+                if config.vocabulary_size is None:
+                    raise ValueError("Vocabulary size is required for neural bag of word encoders")
+                return BagOfWords.new(config.vocabulary_size, encoded_size, config.pooling_type)
         else:
             raise ValueError(f"Unknown encoder type: {config.type}")
 
 
 class BagOfWords(Encoder):
-    def __init__(self, vocabulary_size: int, encoded_size: int, pooling_type: PoolingType):
+    def __init__(self, lookup: nn.Embedding, pooling_type: PoolingType):
         super(BagOfWords, self).__init__()
-        self._lookup = nn.Embedding(vocabulary_size, encoded_size)
+        self._lookup = lookup
         self._pool = pooling_functions[pooling_type]
 
-    def forward(self, token_idxs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    @staticmethod
+    def new(vocabulary_size: int, encoded_size: int, pooling_type: PoolingType):
+        lookup = nn.Embedding(vocabulary_size, encoded_size)
+        return BagOfWords(lookup, pooling_type)
+
+    @staticmethod
+    def from_weights(weights: t.Tensor, pooling_type: PoolingType):
+        lookup = nn.Embedding.from_pretrained(weights.type(t.float32), freeze=True)
+        return BagOfWords(lookup, pooling_type)
+
+    def forward(self, token_idxs: t.Tensor, mask: t.Tensor) -> t.Tensor:
         lookups = self._lookup(token_idxs)
         return self._pool(lookups, mask)

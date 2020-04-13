@@ -28,5 +28,9 @@ name = "preprocess-seq2"
 path = "src/seq2.rs"
 
 [[bin]]
+name = "preprocess-seq-glove"
+path = "src/seq-glove.rs"
+
+[[bin]]
 name = "preprocess-tree"
 path = "src/tree.rs"

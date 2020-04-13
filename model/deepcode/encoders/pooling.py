@@ -13,7 +13,7 @@ def mean(tensor: Tensor, mask: Tensor) -> Tensor:
     tensor[~mask] = 0
     tensor = tensor.sum(-2)
     mask = mask.sum(-1)
-    return tensor / mask.unsqueeze(1).type(t.float32)
+    return tensor / mask.unsqueeze(1).type(tensor.dtype)
 
 
 def max(tensor: Tensor, mask: Tensor) -> Tensor:

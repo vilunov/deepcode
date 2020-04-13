@@ -40,3 +40,13 @@ python -m deepcode.predict \
   -m "$m" \
   -c "$c"
 
+m="../cache/models/2020.04.05_16.58.43-all-256/8.pickle"
+c="../cache/models/2020.04.05_16.58.43-all-256/config.toml"
+o="../cache/models/2020.04.05_16.58.43-all-256/8.csv"
+python -m deepcode.predict \
+  -q ../resources/queries.csv \
+  -l java javascript ruby python go php \
+  -o "$o" \
+  -m "$m" \
+  -c "$c"
+

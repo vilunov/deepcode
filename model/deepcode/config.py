@@ -32,7 +32,8 @@ class Training:
 class Encoder:
     type: str
     pooling_type: Optional[PoolingType]
-    vocabulary_size: Optional[int]
+    vocabulary_size: Optional[int] = None
+    weights_path: Optional[str] = None
 
 
 @dataclass

@@ -12,6 +12,7 @@ dropout_rate = 0.2
 batch_size_train = 512
 batch_size_valid = 100
 func_name_share = 0.1
+title = "test_config"
 
 [model]
 encoded_dims = 128
@@ -34,6 +35,7 @@ type = "nbow"
             batch_size_train=512,
             batch_size_valid=100,
             func_name_share=0.1,
+            title="test_config",
         ),
         model=Model(
             encoded_dims=128,
