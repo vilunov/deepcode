@@ -26,12 +26,13 @@ def main():
     args = arguments()
     with open(args.config, "r") as f:
         config = parse_config(f.read())
+    print(config)
     scaffold = TrainScaffold(config, args.weights_path)
     dir_name = datetime.utcnow().strftime("%Y.%m.%d_%H.%M.%S")
     if config.training.title is not None:
         dir_name += "-" + config.training.title
     epochs = config.training.epochs
-    save_path = os.path.join("..", "cache", "models", datetime.utcnow().strftime("%Y.%m.%d_%H.%M.%S"))
+    save_path = os.path.join("..", "cache", "models", dir_name) 
     logging.info("Starting app")
     os.makedirs(save_path)
     copyfile(args.config, os.path.join(save_path, "config.toml"))
