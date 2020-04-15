@@ -7,6 +7,7 @@ dropout_rate = 0.15
 batch_size_train = 2048
 batch_size_valid = 100
 func_name_share = 0.15
+title = "glove-50"
 
 [model]
 encoded_dims = 50
