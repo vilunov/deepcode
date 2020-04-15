@@ -1,17 +1,14 @@
 use glob::glob;
 use libflate::gzip::Decoder;
 use serde_json::Deserializer;
-use tokenizers::models::bpe::{BpeTrainer, BPE};
-use tokenizers::tokenizer::{EncodeInput, Model, Tokenizer};
+use tokenizers::models::bpe::BPE;
+use tokenizers::tokenizer::{EncodeInput, Tokenizer};
 
-use std::collections::HashMap;
 use std::fs::File;
-use std::path::Path;
 
 mod structs;
 mod utils;
 use crate::structs::*;
-use crate::utils::*;
 
 pub const LANGS: &[&'static str] = &["go", "java", "javascript", "php", "python", "ruby"];
 
@@ -71,6 +68,7 @@ fn convert_to_h5(file: &mut hdf5::File, lang: &'static str) {
     dbg!(snippets.len());
     let dataset = file
         .new_dataset::<Snippet2>()
+        .gzip(6)
         .create(lang, snippets.len())
         .unwrap();
     dataset.write(&snippets[..]).unwrap();

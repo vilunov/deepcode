@@ -4,52 +4,18 @@ use serde_json::Deserializer;
 use tokenizers::models::bpe::BPE;
 use tokenizers::tokenizer::{EncodeInput, Tokenizer};
 
-use std::collections::HashMap;
-use std::fs;
 use std::fs::File;
-use std::io::prelude::*;
-use std::io::LineWriter;
 
 mod structs;
 mod utils;
 use crate::structs::*;
 use crate::utils::*;
 
-fn get_words() -> Vec<String> {
-    let filename = "../resources/glove.6B.100d.txt";
-    let contents = fs::read_to_string(filename).unwrap();
-    let lines = contents.split("\n");
-    let mut words = lines
-        .map(|line| line.split(" ").into_iter().next().unwrap().to_owned())
-        .collect::<Vec<String>>();
-    let _ = words.pop();
-    dbg!(words.len());
-    words
-}
-
-fn write_to_file(w: &[String]) {
-    let file = File::create("../cache/glove-vocab.txt").unwrap();
-    let mut file = LineWriter::new(file);
-    for i in w {
-        file.write_all(i.as_bytes()).unwrap();
-        file.write_all(b"\n").unwrap();
-    }
-}
-
-fn build_inverse(w: &[String]) -> HashMap<String, usize> {
-    let mut map = HashMap::new();
-    for (i, j) in w.iter().enumerate() {
-        map.insert(j.to_owned(), i);
-    }
-    map
-}
-
 fn convert_to_h5(
     train: &mut hdf5::File,
     valid: &mut hdf5::File,
     test: &mut hdf5::File,
     lang: &'static str,
-    doc_vocab: &HashMap<String, usize>,
 ) {
     dbg!("convert_to_h5", lang);
     let train_pattern = train_glob_pattern(lang);
@@ -63,6 +29,15 @@ fn convert_to_h5(
     .build()
     .unwrap();
     let tokenizer_code = Tokenizer::new(Box::new(vocab_code));
+
+    let vocab_doc = BPE::from_files(
+        "../cache/vocabs/doc-vocab.json",
+        "../cache/vocabs/doc-merges.txt",
+    )
+    .unwrap()
+    .build()
+    .unwrap();
+    let tokenizer_doc = Tokenizer::new(Box::new(vocab_doc));
 
     let convert_snippet = |snippet: SnippetBoth| {
         let code_vec: Vec<u32> = snippet
@@ -79,11 +54,23 @@ fn convert_to_h5(
         let doc_vec: Vec<u32> = snippet
             .docstring_tokens
             .into_iter()
-            .flat_map(|i| doc_vocab.get(i.as_str()).map(|&i| i as u32).into_iter())
+            .flat_map(|i| {
+                tokenizer_doc
+                    .encode(EncodeInput::Single(i))
+                    .unwrap()
+                    .get_ids()
+                    .to_vec()
+            })
             .collect::<Vec<u32>>();
         let name_vec = split_identifier(&snippet.func_name)
             .into_iter()
-            .flat_map(|i| doc_vocab.get(i.as_str()).map(|&i| i as u32).into_iter())
+            .flat_map(|i| {
+                tokenizer_doc
+                    .encode(EncodeInput::Single(i))
+                    .unwrap()
+                    .get_ids()
+                    .to_vec()
+            })
             .collect::<Vec<u32>>();
         let mut code_tokens = [0; MAX_LEN];
         let mut doc_tokens = [0; MAX_LEN];
@@ -123,6 +110,7 @@ fn convert_to_h5(
         dbg!(snippets.len());
         let dataset = file
             .new_dataset::<Snippet>()
+            .gzip(6)
             .create(lang, snippets.len())
             .unwrap();
         dataset.write(&snippets[..]).unwrap();
@@ -133,18 +121,15 @@ fn convert_to_h5(
     process(&test_pattern, test);
 }
 
-pub fn build_h5(doc_vocab: &HashMap<String, usize>) {
-    let mut train = hdf5::File::open("../cache/data/glove/train.h5", "w").unwrap();
-    let mut valid = hdf5::File::open("../cache/data/glove/valid.h5", "w").unwrap();
-    let mut test = hdf5::File::open("../cache/data/glove/test.h5", "w").unwrap();
+pub fn build_h5() {
+    let mut train = hdf5::File::open("../cache/data/train.h5", "w").unwrap();
+    let mut valid = hdf5::File::open("../cache/data/valid.h5", "w").unwrap();
+    let mut test = hdf5::File::open("../cache/data/test.h5", "w").unwrap();
     for lang in LANGS {
-        convert_to_h5(&mut train, &mut valid, &mut test, lang, doc_vocab);
+        convert_to_h5(&mut train, &mut valid, &mut test, lang);
     }
 }
 
 fn main() {
-    let words = get_words();
-    let vocab = build_inverse(words.as_slice());
-    write_to_file(words.as_slice());
-    build_h5(&vocab);
+    build_h5();
 }

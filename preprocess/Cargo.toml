@@ -20,17 +20,21 @@ tree-sitter = "0.6.3"
 cc = "1"
 
 [[bin]]
-name = "preprocess-seq"
-path = "src/seq.rs"
+name = "preprocess-vocabs"
+path = "src/bin-vocabs.rs"
 
 [[bin]]
-name = "preprocess-seq2"
-path = "src/seq2.rs"
+name = "preprocess-seq-train"
+path = "src/bin-seq-train.rs"
+
+[[bin]]
+name = "preprocess-seq-search"
+path = "src/bin-seq-search.rs"
 
 [[bin]]
 name = "preprocess-seq-glove"
-path = "src/seq-glove.rs"
+path = "src/bin-seq-glove.rs"
 
 [[bin]]
 name = "preprocess-tree"
-path = "src/tree.rs"
+path = "src/bin-tree.rs"

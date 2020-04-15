@@ -6,6 +6,7 @@ fn compile(language: &str) {
     let files = [dir.join("parser.c"), dir.join("scanner.c")];
     cc::Build::new()
         .include(&dir)
+        .warnings(false)
         .files(files.iter().filter(|f| f.exists()))
         .compile(&dirname);
 }
