@@ -12,10 +12,15 @@ import parmap
 import torch as t
 import pandas as pd
 from annoy import AnnoyIndex
-from tqdm import tqdm
+from tokenizers import ByteLevelBPETokenizer
 
 from deepcode.config import parse_config
 from deepcode.predict.scaffold import PredictScaffold
+
+tokenizers_code = {
+    code: ByteLevelBPETokenizer(f"../cache/vocabs/code-{code}-vocab.json", f"../cache/vocabs/code-{code}-merges.txt")
+    for code in ["java", "javascript", "php", "ruby", "python", "go"]
+}
 
 
 def arguments():
@@ -49,7 +54,6 @@ class LangIndex:
 
 
 def process(snippet, device):
-    from tok import tokenizers_code
     tokenizer = tokenizers_code[snippet["language"]]
     tokens = snippet["function_tokens"]
     tokens = tokenizer.encode_batch(tokens)
@@ -79,13 +83,18 @@ def main():
     max_len = max(len(q) for q in queries)
     queries_ids = t.stack(
         [
-            t.cat([t.tensor(q.ids, device=scaffold.device), t.zeros(max_len - len(q.ids), device=scaffold.device, dtype=t.long)])
+            t.cat(
+                [
+                    t.tensor(q.ids, device=scaffold.device),
+                    t.zeros(max_len - len(q.ids), device=scaffold.device, dtype=t.long),
+                ]
+            )
             for q in queries
         ]
     )
     queries_mask = t.zeros(len(queries), max(len(q) for q in queries), dtype=t.bool, device=scaffold.device)
     for i, q in enumerate(queries):
-        queries_mask[i, :len(q)] = True
+        queries_mask[i, : len(q)] = True
     del queries
 
     logging.info(f"Loaded all queries {queries_ids.shape}")
@@ -98,7 +107,7 @@ def main():
         language = data[0]["language"]
         processed = parmap.map(process, data, scaffold.device, pm_pool=pool, pm_pbar=True)
         del data
-        data_new[language] = processed 
+        data_new[language] = processed
         logging.info(f"Processed {data_file}")
         gc.collect()
     logging.info("Loaded all data")
@@ -120,7 +129,9 @@ def main():
                 index = LangIndex(config.model.encoded_dims, "angular")
                 for i, (tokens, identifier, url) in enumerate(data):
                     encoder = scaffold.model.encoders_code[language]
-                    repr = encoder(tokens.unsqueeze(0), t.ones(1, tokens.shape[0], dtype=t.bool, device=scaffold.device))
+                    repr = encoder(
+                        tokens.unsqueeze(0), t.ones(1, tokens.shape[0], dtype=t.bool, device=scaffold.device)
+                    )
                     index.append(repr[0], identifier, url)
                 index.index.build(10)
                 logging.info(f"Built index for {language}")
@@ -142,4 +153,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

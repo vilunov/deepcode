@@ -23,6 +23,21 @@ class Encoder(nn.Module):
                 if config.vocabulary_size is None:
                     raise ValueError("Vocabulary size is required for neural bag of word encoders")
                 return BagOfWords.new(config.vocabulary_size, encoded_size, config.pooling_type)
+        elif config.type == "lstm":
+            from deepcode.encoders.rnn import LSTM
+
+            if config.pooling_type is None:
+                raise ValueError("Pooling type is required for LSTM encoders")
+            if config.vocabulary_size is None:
+                raise ValueError("Vocabulary size is required for LSTM encoders")
+            if config.intermediate_size is None:
+                raise ValueError("Intermediate vector size is required for LSTM encoders")
+            return LSTM(
+                intermediate_size=config.intermediate_size,
+                encoded_size=encoded_size,
+                pooling_type=config.pooling_type,
+                vocab_size=config.vocabulary_size,
+            )
         else:
             raise ValueError(f"Unknown encoder type: {config.type}")
 

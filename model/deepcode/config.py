@@ -34,6 +34,7 @@ class Encoder:
     pooling_type: Optional[PoolingType]
     vocabulary_size: Optional[int] = None
     weights_path: Optional[str] = None
+    intermediate_size: Optional[int] = None
 
 
 @dataclass

@@ -5,6 +5,7 @@ import json
 
 from tqdm import tqdm
 
+
 def arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", type=str, required=True, dest="input", help="input file")
@@ -30,5 +31,5 @@ def main():
             f.write("\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

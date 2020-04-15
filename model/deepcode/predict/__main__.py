@@ -79,7 +79,9 @@ def main(enable_wandb: bool = False):
         logging.info(f"Starting on {language}")
         tokens_dataset = CodeDataset(h5_file[language], language, scaffold.device)
         sampler = BatchSampler(SequentialSampler(tokens_dataset), batch_size=1024, drop_last=False)
-        tokens_dataloader = BackgroundGenerator(DataLoader(tokens_dataset, batch_sampler=sampler, collate_fn=collate), buffer_size=256)
+        tokens_dataloader = BackgroundGenerator(
+            DataLoader(tokens_dataset, batch_sampler=sampler, collate_fn=collate), buffer_size=256
+        )
         encoder_code = scaffold.model.encoders_code[language]
         data_file = f"../cache/data-test/{language}.jsonl.gz"
         index = LangIndex(config.model.encoded_dims, "angular")

@@ -1,10 +1,10 @@
 import torch
 
-from deepcode import encoders
+from deepcode.encoders import BagOfWords, PoolingType
 
 
 def test_bow_mean():
-    encoder = encoders.BagOfWords.new(128, 64, encoders.PoolingType.MEAN)
+    encoder = BagOfWords.new(128, 64, PoolingType.MEAN)
     input_batch = torch.tensor([[1, 2, 3, 4], [4, 3, 1, 2]])
     assert input_batch.shape == (2, 4)
     input_mask = torch.ones((2, 4)).type(torch.bool)
@@ -16,7 +16,7 @@ def test_bow_mean():
 
 
 def test_bow_max():
-    encoder = encoders.BagOfWords.new(128, 64, encoders.PoolingType.MAX)
+    encoder = BagOfWords.new(128, 64, PoolingType.MAX)
     input_batch = torch.tensor([[1, 2, 3, 4], [4, 3, 1, 2]])
     assert input_batch.shape == (2, 4)
     input_mask = torch.ones((2, 4)).type(torch.bool)
@@ -28,7 +28,7 @@ def test_bow_max():
 
 
 def test_bow_mean_mask():
-    encoder = encoders.BagOfWords.new(128, 64, encoders.PoolingType.MEAN)
+    encoder = BagOfWords.new(128, 64, PoolingType.MEAN)
     input_batch = torch.tensor([[1, 2, 3, 4], [4, 3, 1, 2], [1, 2, 4, 3]])
     assert input_batch.shape == (3, 4)
     input_mask = torch.tensor([[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 1, 1]]).type(torch.bool)

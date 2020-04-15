@@ -32,7 +32,7 @@ def main():
     if config.training.title is not None:
         dir_name += "-" + config.training.title
     epochs = config.training.epochs
-    save_path = os.path.join("..", "cache", "models", dir_name) 
+    save_path = os.path.join("..", "cache", "models", dir_name)
     logging.info("Starting app")
     os.makedirs(save_path)
     copyfile(args.config, os.path.join(save_path, "config.toml"))
